@@ -1,0 +1,4 @@
+node_modules
+.env
+raw_coned_data.json
+screenshot.png
