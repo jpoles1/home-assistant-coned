@@ -1,5 +1,5 @@
 node_modules
 .env
 out
-screenshot.png
+*.png
 db.json
