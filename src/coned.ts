@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import fs from "fs";
-import * as pupeteer from "puppeteer";
+import pupeteer from "puppeteer";
 
 function sleep(ms: number) {
 	return new Promise((resolve) => {
@@ -12,7 +12,7 @@ export class ConEd {
 	browser: pupeteer.Browser | undefined;
 	output_dir = "out";
 	refresh_interval_min = 15;
-	db_store: ((raw_data: any) => Promise<any>) | undefined;
+	db_store: ((raw_data: any, output_dir: string) => Promise<any>) | undefined;
 
 	public constructor(values: Partial<ConEd>) {
 		Object.assign(this, values);
@@ -45,7 +45,7 @@ export class ConEd {
 		if (!fs.existsSync(this.output_dir)) {
 			fs.mkdirSync(this.output_dir);
 		}
-	}	
+	}
 	async login(): Promise<void> {
 		const page = await this.browser!.newPage();
 		// Login to ConEd website
@@ -105,7 +105,7 @@ export class ConEd {
 			}
 			console.log(chalk.green("Successfully retrieved API data!"));
 			fs.writeFileSync(`${this.output_dir}/raw_coned_data.json`, text_data);
-			this.db_store!(raw_data);
+			this.db_store!(raw_data, this.output_dir);
 			await sleep(this.refresh_interval_min * 60 * 1000);
 		}
 	}
