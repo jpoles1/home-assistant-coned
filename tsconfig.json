@@ -1,15 +1,14 @@
 {
-    "compilerOptions": {
-      "module": "es6",  
-      "outDir": "./built",
-      "allowJs": true,
-      "target": "es6",
-      "sourceMap": true,  
-      "esModuleInterop": true  
-    },
-    "include": ["./**/*.ts"],
-    "exclude": [  
-      "node_modules"  
-    ]  
-  
-  }
+  "compilerOptions": {
+    "target": "es2018",
+    "module": "commonjs",
+    "outDir": "./lib",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true
+  },
+  "exclude": [
+    "test",
+    "statmed-frontend"
+  ]
+}

@@ -5,6 +5,7 @@
   "scripts": {
     "start": "ts-node index.ts",
     "watch": "nodemon --ignore out/*",
+    "lint": "eslint src/. --config .eslintrc.js --ext .ts --fix",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
