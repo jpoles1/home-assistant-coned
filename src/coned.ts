@@ -1,5 +1,4 @@
 import chalk from "chalk";
-import fs from "fs";
 import pupeteer from "puppeteer";
 
 function sleep(ms: number) {
@@ -10,17 +9,14 @@ function sleep(ms: number) {
 
 export class ConEd {
 	browser: pupeteer.Browser | undefined;
-	output_dir = "out";
 	refresh_interval_min = 15;
-	db_store: ((raw_data: any, output_dir: string) => Promise<any>) | undefined;
+	db_store: ((raw_data: any) => Promise<any>) | undefined;
 
 	public constructor(values: Partial<ConEd>) {
 		Object.assign(this, values);
 		if (!this.valid_config()) {
 			return;
 		}
-		this.output_dir = "./out";
-		this.check_output_dir();
 	}
 
 	valid_config(): boolean {
@@ -39,12 +35,6 @@ export class ConEd {
 			defaultViewport: { width: 1920, height: 1080 },
 			args: ["--no-sandbox", "--disable-setuid-sandbox"],
 		});
-	}
-	check_output_dir(): void {
-		// Ensure output dir exists
-		if (!fs.existsSync(this.output_dir)) {
-			fs.mkdirSync(this.output_dir);
-		}
 	}
 	async login(): Promise<void> {
 		const page = await this.browser!.newPage();
@@ -65,7 +55,7 @@ export class ConEd {
 		await sleep(5000);
 		await page.screenshot({ path: "meter1.png" });
 	}
-	async fetch(): Promise<[string, any]> {
+	async fetch(): Promise<any> {
 		return new Promise(async (resolve) => {
 			// Access the API using your newly acquired authentication cookies!
 			const api_page = await this.browser!.newPage();
@@ -76,37 +66,26 @@ export class ConEd {
 			const text_data = await api_page.evaluate((el: HTMLElement) => el.textContent, data_elem);
 			const raw_data = JSON.parse(text_data!);
 			//api_page.close();
-			resolve([text_data!, raw_data]);
+			resolve(raw_data);
 		});
 	}
-	async fetch_once() {
+	async fetch_once(): Promise<void> {
+		await this.init();
 		await this.login();
-		let text_data = "";
-		let raw_data = {} as any;
-		[text_data, raw_data] = await this.fetch();
+		let raw_data = await this.fetch();
 		while ("error" in raw_data) {
 			console.log(chalk.yellow("Failed to fetch data from API:", raw_data["error"]["details"]));
-			[text_data, raw_data] = await this.fetch();
+			raw_data = await this.fetch();
 			await sleep(15000);
 		}
 		console.log(chalk.green("Successfully retrieved API data!"));
-		fs.writeFileSync(`${this.output_dir}/raw_coned_data.json`, text_data);
+		this.db_store!(raw_data);
+		await this.browser?.close();
 	}
-	async monitor() {
-		await this.login();
-		while (true) {
-			let text_data = "";
-			let raw_data = {} as any;
-			[text_data, raw_data] = await this.fetch();
-			while ("error" in raw_data) {
-				console.log(chalk.yellow("Failed to fetch data from API:", raw_data["error"]["details"]));
-				[text_data, raw_data] = await this.fetch();
-				await sleep(15000);
-			}
-			console.log(chalk.green("Successfully retrieved API data!"));
-			fs.writeFileSync(`${this.output_dir}/raw_coned_data.json`, text_data);
-			this.db_store!(raw_data, this.output_dir);
-			await sleep(this.refresh_interval_min * 60 * 1000);
-		}
+	monitor(interval_min = 15): void {
+		this.fetch_once();
+		setInterval(() => {
+			this.fetch_once();
+		}, interval_min * 60 * 1000);
 	}
 }

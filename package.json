@@ -4,7 +4,7 @@
   "description": "",
   "scripts": {
     "start": "ts-node src/index.ts",
-    "watch": "nodemon --ignore out/*",
+    "watch": "nodemon -L --watch src --ignore out/ -e ts",
     "lint": "eslint src/. --config .eslintrc.js --ext .ts --fix",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -13,6 +13,7 @@
   "dependencies": {
     "chalk": "^4.1.0",
     "dotenv": "^8.2.0",
+    "fastify": "^3.20.0",
     "puppeteer": "^5.2.1",
     "sqlite3": "^5.0.2",
     "trilogy": "^2.0.3",
