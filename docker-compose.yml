@@ -1,0 +1,8 @@
+version: "2"
+services:
+  coned:
+    build: .
+    ports:
+      - "3000:3000"
+    command: bash -c "npm start"
+    restart: unless-stopped
