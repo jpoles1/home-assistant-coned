@@ -93,21 +93,24 @@ async function main() {
 			}
 		}
 		powerModel.find({}, { limit: n_results, order: ["startTime", "desc"] }).then((raw_data) => {
-			const time_fmt_opts: any = { hour: "2-digit", minute: "2-digit", hour12: false };
+			function to_delta_string(dt: Date): string {
+				const delta_min = Math.abs(dt.getTime() - new Date().getTime()) / 6e4;
+				return delta_min < 60 ? `${delta_min.toFixed(0)}min` : `${(delta_min / 60).toFixed(1)}hr`;
+			}
 			//Create array of power readings starting with the most recent
 			const readings = Object.values(raw_data).map((row: PowerEntry) => row.power);
 			//Time of earliest read in list
-			const first_read_time = Object.values(raw_data)[raw_data.length - 1].startTime.toLocaleTimeString([], time_fmt_opts);
+			const earliest_dt: Date = Object.values(raw_data)[raw_data.length - 1].startTime;
+			const earliest_delta = to_delta_string(earliest_dt);
 			//Time of peak (most recent if tie)
 			const peak_index = readings.indexOf(Math.max.apply(null, readings));
-			const peak_time = Object.values(raw_data)[peak_index].startTime.toLocaleTimeString([], time_fmt_opts);
+			const peak = Object.values(raw_data)[peak_index].power;
+			const peak_dt = Object.values(raw_data)[peak_index].startTime;
+			const peak_delta = to_delta_string(peak_dt);
 			//Time of latest read in list
-			const latest: Date = Object.values(raw_data)[0].startTime;
-			const last_read_time = latest.toLocaleTimeString([], time_fmt_opts);
-			const last_update_min = Math.abs(latest.getTime() - new Date().getTime()) / 6e4;
-			const latest_dt = `${latest.toLocaleDateString()} @ ${latest.toLocaleTimeString([], time_fmt_opts)}`;
-			const latest_delta = last_update_min < 60 ? `${last_update_min.toFixed(0)} min ago` : `${(last_update_min / 60).toFixed(1)} hr ago`;
-			const resp_data = { latest_dt, latest_delta, readings, first_read_time, last_read_time, peak_time };
+			const latest_dt: Date = Object.values(raw_data)[0].startTime;
+			const latest_delta = to_delta_string(latest_dt);
+			const resp_data = { earliest_delta, latest_delta, peak, peak_delta, readings };
 			reply.send(resp_data);
 		});
 	});
