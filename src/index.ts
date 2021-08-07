@@ -93,12 +93,21 @@ async function main() {
 			}
 		}
 		powerModel.find({}, { limit: n_results, order: ["startTime", "desc"] }).then((raw_data) => {
+			const time_fmt_opts: any = { hour: "2-digit", minute: "2-digit", hour12: false };
+			//Create array of power readings starting with the most recent
 			const readings = Object.values(raw_data).map((row: PowerEntry) => row.power);
+			//Time of earliest read in list
+			const first_read_time = Object.values(raw_data)[raw_data.length - 1].startTime.toLocaleTimeString([], time_fmt_opts);
+			//Time of peak (most recent if tie)
+			const peak_index = readings.indexOf(Math.max.apply(null, readings));
+			const peak_time = Object.values(raw_data)[peak_index].startTime.toLocaleTimeString([], time_fmt_opts);
+			//Time of latest read in list
 			const latest: Date = Object.values(raw_data)[0].startTime;
+			const last_read_time = latest.toLocaleTimeString([], time_fmt_opts);
 			const last_update_min = Math.abs(latest.getTime() - new Date().getTime()) / 6e4;
-			const latest_dt = `${latest.toLocaleDateString()} @ ${latest.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })}`;
+			const latest_dt = `${latest.toLocaleDateString()} @ ${latest.toLocaleTimeString([], time_fmt_opts)}`;
 			const latest_delta = last_update_min < 60 ? `${last_update_min.toFixed(0)} min ago` : `${(last_update_min / 60).toFixed(1)} hr ago`;
-			const resp_data = { latest_dt, latest_delta, readings };
+			const resp_data = { latest_dt, latest_delta, readings, first_read_time, last_read_time, peak_time };
 			reply.send(resp_data);
 		});
 	});
