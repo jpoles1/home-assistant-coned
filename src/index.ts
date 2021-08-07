@@ -95,7 +95,7 @@ async function main() {
 		powerModel.find({}, { limit: n_results, order: ["startTime", "desc"] }).then((raw_data) => {
 			function to_delta_string(dt: Date): string {
 				const delta_min = Math.abs(dt.getTime() - new Date().getTime()) / 6e4;
-				return delta_min < 60 ? `${delta_min.toFixed(0)}min` : `${(delta_min / 60).toFixed(1)}hr`;
+				return delta_min < 60 ? `${delta_min.toFixed(0)}min` : `${(delta_min / 60).toPrecision(2)}hr`;
 			}
 			//Create array of power readings starting with the most recent
 			const readings = Object.values(raw_data).map((row: PowerEntry) => row.power);
