@@ -30,7 +30,13 @@ async function main() {
 		endTime: { type: Date, unique: true },
 		power: { type: Number },
 	};
-	const powerModel = await db.model("power", powerSchema);
+	type PowerEntry = {
+		id: number;
+		startTime: Date;
+		endTime: Date;
+		power: number;
+	};
+	const powerModel = await db.model<PowerEntry>("power", powerSchema);
 
 	async function db_store(raw_data: any) {
 		const filtered_data = raw_data.reads.filter((row: any) => {
@@ -55,7 +61,7 @@ async function main() {
 	// Declare a route
 	server.get<{
 		Querystring: { h: number };
-	}>("/latest", (request, reply) => {
+	}>("/", (request, reply) => {
 		console.log(request.query);
 		let hour_lookback = 24;
 		if (request.query.h) {
@@ -68,8 +74,32 @@ async function main() {
 		}
 		const d = new Date();
 		d.setHours(d.getHours() - hour_lookback);
-		powerModel.find([["startTime", ">", d]]).then((resp_data) => {
-			reply.send({ data: resp_data });
+		powerModel.find([["startTime", ">", d]]).then((raw_data) => {
+			reply.send({ data: raw_data });
+		});
+	});
+
+	server.get<{
+		Querystring: { n: number };
+	}>("/latest", (request, reply) => {
+		console.log(request.query);
+		let n_results = 64;
+		if (request.query.n) {
+			if (!!Number(request.query.n)) {
+				n_results = Number(request.query.n);
+			} else {
+				reply.code(400).type("text/plain").send("Err 400: Invalid Request");
+				return;
+			}
+		}
+		powerModel.find({}, { limit: n_results, order: ["startTime", "desc"] }).then((raw_data) => {
+			const readings = Object.values(raw_data).map((row: PowerEntry) => row.power);
+			const latest: Date = Object.values(raw_data)[0].startTime;
+			const last_update_min = Math.abs(latest.getTime() - new Date().getTime()) / 6e4;
+			const latest_dt = `${latest.toLocaleDateString()} @ ${latest.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })}`;
+			const latest_delta = last_update_min < 60 ? `${last_update_min.toFixed(0)} min ago` : `${(last_update_min / 60).toFixed(1)} hr ago`;
+			const resp_data = { latest_dt, latest_delta, readings };
+			reply.send(resp_data);
 		});
 	});
 
