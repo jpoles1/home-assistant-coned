@@ -3,4 +3,4 @@ run:
 watch:
 	npm run watch
 docker_rebuild:
-	docker-compose up --build
+	docker-compose up -d --build
