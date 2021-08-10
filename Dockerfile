@@ -1,6 +1,6 @@
 FROM node:12-buster
 
-RUN apt-get update && apt-get install -y chromium
+RUN apt-get update && apt-get install -y chromium jq
 
 RUN ln -s /usr/bin/chromium /usr/bin/chromium-browser
 
@@ -13,4 +13,5 @@ RUN npm install
 
 COPY . .
 
-CMD chmod +x run.sh && run.sh
+RUN chmod a+x run.sh
+CMD ./run.sh
