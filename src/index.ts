@@ -4,11 +4,12 @@
 require("dotenv").config();
 
 import { ConEd } from "./coned";
-
 import { connect } from "trilogy";
 import chalk from "chalk";
 import fs from "fs";
+import moment from "moment";
 import fastify from "fastify";
+import mqtt from "async-mqtt";
 
 const output_dir = "out";
 
@@ -38,10 +39,23 @@ async function main() {
 	};
 	const powerModel = await db.model<PowerEntry>("power", powerSchema);
 
+	let latest_read_startTime = new Date(0);
+	async function send_mqtt(latest_read: PowerEntry) {
+		if (latest_read.startTime < latest_read_startTime) return;
+		latest_read_startTime = latest_read.startTime;
+		mqtt.connectAsync(process.env.MQTT_HOST).then(async (client) => {
+			await client.publish("coned/meter_read", JSON.stringify(latest_read));
+			await client.end();
+			console.log(chalk.green(`Sent MQTT update: ${latest_read.power} kWh @ ${moment(latest_read.startTime).format("LLL")}`));
+		});
+	}
+
 	async function db_store(raw_data: any) {
 		const filtered_data = raw_data.reads.filter((row: any) => {
 			return row.value !== null && row.value !== undefined;
 		});
+		const latest_read = filtered_data[0];
+		send_mqtt(latest_read);
 		for (const row of filtered_data) {
 			await powerModel.updateOrCreate({ startTime: new Date(row.startTime), endTime: new Date(row.endTime) }, { power: row.value }).catch((e) => {
 				console.log(chalk.red(`Err: ${e}`));
