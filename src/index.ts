@@ -40,20 +40,22 @@ async function main() {
 	const energyModel = await db.model<EnergyEntry>("energy", energySchema);
 
 	let latest_read_startTime = new Date(0);
-	async function update_sensor(latest_read: EnergyEntry) {
+	async function update_sensor(latest_read: any) {
 		if (latest_read.startTime < latest_read_startTime) return;
 		latest_read_startTime = latest_read.startTime;
 		axios.post("http://supervisor/core/api/states/sensor.coned_energy", {
-			state: `${latest_read.energy}`,
+			state: latest_read.value,
 			attributes: { unit_of_measurement: "kWh", friendly_name: "ConEd Energy Usage", device_class: "energy", state_class: "measurement", last_reset: latest_read.startTime },
+		}, {
+			headers: {"Authorization": `Bearer ${process.env.SUPERVISOR_TOKEN}`, "Content-Type": "application/json"}
 		});
-		console.log(chalk.green(`Sent sensor update: ${latest_read.energy} kWh @ ${moment(latest_read.startTime).format("LLL")}`));
+		console.log(chalk.green(`Sent sensor update: ${latest_read.value} kWh @ ${moment(latest_read.startTime).format("LLL")}`));
 	}
 
 	async function db_store(raw_data: any) {
 		const filtered_data = raw_data.reads.filter((row: any) => {
 			return row.value !== null && row.value !== undefined;
-		});
+		})
 		const latest_read = filtered_data[0];
 		update_sensor(latest_read);
 		for (const row of filtered_data) {
@@ -69,7 +71,7 @@ async function main() {
 	c.monitor();
 
 	const server = fastify({
-		logger: true,
+		//logger: true,
 	});
 
 	// Declare a route

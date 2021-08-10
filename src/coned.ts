@@ -55,7 +55,7 @@ export class ConEd {
 		await sleep(5000);
 		await page.screenshot({ path: "meter1.png" });
 	}
-	async fetch(): Promise<any> {
+	async read_api(): Promise<any> {
 		return new Promise(async (resolve) => {
 			// Access the API using your newly acquired authentication cookies!
 			const api_page = await this.browser!.newPage();
@@ -65,21 +65,27 @@ export class ConEd {
 			const data_elem = await api_page.$("pre");
 			const text_data = await api_page.evaluate((el: HTMLElement) => el.textContent, data_elem);
 			const raw_data = JSON.parse(text_data!);
-			//api_page.close();
+			await api_page.close();
 			resolve(raw_data);
 		});
 	}
 	async fetch_once(): Promise<void> {
 		await this.init();
 		await this.login();
-		let raw_data = await this.fetch();
-		while ("error" in raw_data) {
+		let raw_data = await this.read_api();
+		let attempt = 1;
+		while ("error" in raw_data && attempt < 5) {
 			console.log(chalk.yellow("Failed to fetch data from API:", raw_data["error"]["details"]));
-			raw_data = await this.fetch();
+			raw_data = await this.read_api();
 			await sleep(15000);
+			attempt++;
 		}
-		console.log(chalk.green("Successfully retrieved API data!"));
-		this.db_store!(raw_data);
+		if (attempt < 5) {
+			console.log(chalk.green("Successfully retrieved API data!"));
+			this.db_store!(raw_data);
+		} else {
+			console.log(chalk.red("Failed to retrieve API data:", raw_data["error"]));
+		}
 		await this.browser?.close();
 	}
 	monitor(interval_min = 15): void {
