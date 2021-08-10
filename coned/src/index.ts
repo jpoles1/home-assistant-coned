@@ -128,6 +128,9 @@ async function main() {
 			const latest_delta = to_delta_string(latest_dt);
 			const resp_data = { earliest_delta, latest_delta, peak, peak_delta, readings };
 			reply.send(resp_data);
+		}).catch((err: any) => {
+			console.log(chalk.red("Failed to fetch latest data:", err));
+			reply.code(500).send();
 		});
 	});
 
