@@ -9,7 +9,7 @@ import chalk from "chalk";
 import fs from "fs";
 import moment from "moment";
 import fastify from "fastify";
-import mqtt from "async-mqtt";
+import axios from "axios";
 
 const output_dir = "out";
 
@@ -25,29 +25,29 @@ async function main() {
 		console.log(chalk.green("Successfully closed DB connection!"));
 	});
 
-	const powerSchema = {
+	const energySchema = {
 		id: "increments",
 		startTime: { type: Date, unique: true },
 		endTime: { type: Date, unique: true },
-		power: { type: Number },
+		energy: { type: Number },
 	};
-	type PowerEntry = {
+	type EnergyEntry = {
 		id: number;
 		startTime: Date;
 		endTime: Date;
-		power: number;
+		energy: number;
 	};
-	const powerModel = await db.model<PowerEntry>("power", powerSchema);
+	const energyModel = await db.model<EnergyEntry>("energy", energySchema);
 
 	let latest_read_startTime = new Date(0);
-	async function send_mqtt(latest_read: PowerEntry) {
+	async function update_sensor(latest_read: EnergyEntry) {
 		if (latest_read.startTime < latest_read_startTime) return;
 		latest_read_startTime = latest_read.startTime;
-		mqtt.connectAsync(process.env.MQTT_HOST).then(async (client) => {
-			await client.publish("coned/meter_read", JSON.stringify(latest_read));
-			await client.end();
-			console.log(chalk.green(`Sent MQTT update: ${latest_read.power} kWh @ ${moment(latest_read.startTime).format("LLL")}`));
+		axios.post("http://supervisor/core/api/states/sensor.coned_energy", {
+			state: `${latest_read.energy}`,
+			attributes: { unit_of_measurement: "kWh", friendly_name: "ConEd Energy Usage", device_class: "energy", state_class: "measurement", last_reset: latest_read.startTime },
 		});
+		console.log(chalk.green(`Sent sensor update: ${latest_read.energy} kWh @ ${moment(latest_read.startTime).format("LLL")}`));
 	}
 
 	async function db_store(raw_data: any) {
@@ -55,9 +55,9 @@ async function main() {
 			return row.value !== null && row.value !== undefined;
 		});
 		const latest_read = filtered_data[0];
-		send_mqtt(latest_read);
+		update_sensor(latest_read);
 		for (const row of filtered_data) {
-			await powerModel.updateOrCreate({ startTime: new Date(row.startTime), endTime: new Date(row.endTime) }, { power: row.value }).catch((e) => {
+			await energyModel.updateOrCreate({ startTime: new Date(row.startTime), endTime: new Date(row.endTime) }, { energy: row.value }).catch((e) => {
 				console.log(chalk.red(`Err: ${e}`));
 			});
 		}
@@ -88,7 +88,7 @@ async function main() {
 		}
 		const d = new Date();
 		d.setHours(d.getHours() - hour_lookback);
-		powerModel.find([["startTime", ">", d]]).then((raw_data) => {
+		energyModel.find([["startTime", ">", d]]).then((raw_data) => {
 			reply.send({ data: raw_data });
 		});
 	});
@@ -106,19 +106,19 @@ async function main() {
 				return;
 			}
 		}
-		powerModel.find({}, { limit: n_results, order: ["startTime", "desc"] }).then((raw_data) => {
+		energyModel.find({}, { limit: n_results, order: ["startTime", "desc"] }).then((raw_data) => {
 			function to_delta_string(dt: Date): string {
 				const delta_min = Math.abs(dt.getTime() - new Date().getTime()) / 6e4;
 				return delta_min < 60 ? `${delta_min.toFixed(0)}min` : `${(delta_min / 60).toPrecision(2)}hr`;
 			}
-			//Create array of power readings starting with the most recent
-			const readings = Object.values(raw_data).map((row: PowerEntry) => row.power);
+			//Create array of energy readings starting with the most recent
+			const readings = Object.values(raw_data).map((row: EnergyEntry) => row.energy);
 			//Time of earliest read in list
 			const earliest_dt: Date = Object.values(raw_data)[raw_data.length - 1].startTime;
 			const earliest_delta = to_delta_string(earliest_dt);
 			//Time of peak (most recent if tie)
 			const peak_index = readings.indexOf(Math.max.apply(null, readings));
-			const peak = Object.values(raw_data)[peak_index].power;
+			const peak = Object.values(raw_data)[peak_index].energy;
 			const peak_dt = Object.values(raw_data)[peak_index].startTime;
 			const peak_delta = to_delta_string(peak_dt);
 			//Time of latest read in list

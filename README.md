@@ -17,7 +17,7 @@ Copy `example.env` to `.env` and input your account information. See below for M
 ```
 EMAIL=test@test.com
 PASSWORD=correcthorsebatterystaple
-MFA_ANSWER=youranswerhere
+MFA_SECRET=youranswerhere
 ACCOUNT_ID=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
 METER_NUM=XXXXXXX
 ```

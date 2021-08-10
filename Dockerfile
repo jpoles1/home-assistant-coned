@@ -12,3 +12,5 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1
 RUN npm install
 
 COPY . .
+
+CMD chmod +x run.sh && run.sh

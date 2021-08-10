@@ -20,7 +20,7 @@ export class ConEd {
 	}
 
 	valid_config(): boolean {
-		const req_config = ["EMAIL", "PASSWORD", "MFA_ANSWER", "ACCOUNT_ID", "METER_NUM"];
+		const req_config = ["EMAIL", "PASSWORD", "MFA_SECRET", "ACCOUNT_UUID", "METER_NUM"];
 		return req_config.every((config) => {
 			if (!process.env[config]) {
 				console.log(chalk.red(`${config} is not set in the .env config! Exiting...`));
@@ -48,7 +48,7 @@ export class ConEd {
 		await sleep(5000);
 		await page.screenshot({ path: "meter0.png" });
 		// Enter in 2 factor auth code (see README for details)
-		await page.type("#form-login-mfa-code", process.env.MFA_ANSWER!);
+		await page.type("#form-login-mfa-code", process.env.MFA_SECRET!);
 		await page.click(".js-login-new-device-form .button");
 		// Wait for authentication to complete
 		await page.waitForNavigation();
@@ -59,7 +59,7 @@ export class ConEd {
 		return new Promise(async (resolve) => {
 			// Access the API using your newly acquired authentication cookies!
 			const api_page = await this.browser!.newPage();
-			const api_url = `https://cned.opower.com/ei/edge/apis/cws-real-time-ami-v1/cws/cned/accounts/${process.env.ACCOUNT_ID}/meters/${process.env.METER_NUM}/usage`;
+			const api_url = `https://cned.opower.com/ei/edge/apis/cws-real-time-ami-v1/cws/cned/accounts/${process.env.ACCOUNT_UUID}/meters/${process.env.METER_NUM}/usage`;
 			await api_page.goto(api_url);
 			await api_page.screenshot({ path: "meter2.png" });
 			const data_elem = await api_page.$("pre");

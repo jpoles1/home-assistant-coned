@@ -1,7 +1,7 @@
 EMAIL=test@test.com
 PASSWORD=correcthorsebatterystaple
-MFA_ANSWER=youranswerhere
+MFA_SECRET=youranswerhere
 #To find the below values go to coned.com and use the browser developer tools to search for cws-real-time-ami-v1 in the network tab. 
 #Use the first alphanumeric code in the url for ACCOUNT_ID and the second for METER_NUM
-ACCOUNT_ID=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
+ACCOUNT_UUID=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
 METER_NUM=XXXXXXX
