@@ -82,7 +82,6 @@ async function main() {
 	server.get<{
 		Querystring: { h: number };
 	}>("/", (request, reply) => {
-		console.log(request.query);
 		let hour_lookback = 24;
 		if (request.query.h) {
 			if (!!Number(request.query.h)) {
@@ -102,7 +101,6 @@ async function main() {
 	server.get<{
 		Querystring: { n: number };
 	}>("/latest", (request, reply) => {
-		console.log(request.query);
 		let n_results = 64;
 		if (request.query.n) {
 			if (!!Number(request.query.n)) {
