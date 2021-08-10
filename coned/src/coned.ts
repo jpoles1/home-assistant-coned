@@ -89,11 +89,12 @@ export class ConEd {
 		await this.browser?.close();
 	}
 	monitor(interval_min = 15): void {
-		this.fetch_once();
-		setInterval(() => {
-			this.fetch_once().catch((err) => {
-				console.log(chalk.red("Fetch failed:", err))
-			});
-		}, interval_min * 60 * 1000);
+		this.fetch_once().then(() => {
+			setInterval(() => {
+				this.fetch_once().catch((err) => {
+					console.log(chalk.red("Fetch failed:", err));
+				});
+			}, interval_min * 60 * 1000);
+		});
 	}
 }

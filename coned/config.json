@@ -1,6 +1,6 @@
 {
     "name": "ConEd/ORU Electric Meter",
-    "version": "0.4.4",
+    "version": "0.4.5",
     "slug": "coned",
     "description": "Read your ConEd/ORU meter energy usage into your Home Assistant via MQTT",
     "url": "https://github.com/jpoles1/home-assistant-coned",
@@ -36,7 +36,7 @@
       "mfa_secret": "str",
       "account_uuid": "str",
       "meter_number": "str",
-      "site": "list(coned,oru)"
+      "site": "list(coned|oru)"
      }
   }
   
