@@ -47,7 +47,13 @@ async function main() {
 			"http://supervisor/core/api/states/sensor.coned_energy",
 			{
 				state: latest_read.value,
-				attributes: { unit_of_measurement: "kWh", friendly_name: "ConEd Energy Usage", device_class: "energy", state_class: "measurement", last_reset: latest_read.startTime },
+				attributes: {
+					unit_of_measurement: "kWh",
+					friendly_name: "ConEd Energy Usage",
+					device_class: "energy",
+					state_class: "measurement",
+					last_reset: latest_read.startTime.toISOString(),
+				},
 			},
 			{
 				headers: { Authorization: `Bearer ${process.env.SUPERVISOR_TOKEN}`, "Content-Type": "application/json" },
