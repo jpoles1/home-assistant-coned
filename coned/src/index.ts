@@ -32,44 +32,52 @@ async function main() {
 		energy: { type: Number },
 	};
 	type EnergyEntry = {
-		id: number;
+		id?: number;
 		startTime: Date;
 		endTime: Date;
 		energy: number;
 	};
 	const energyModel = await db.model<EnergyEntry>("energy", energySchema);
 
-	let latest_read_startTime = new Date(0);
-	async function update_sensor(latest_read: any) {
-		if (latest_read.startTime < latest_read_startTime) return;
-		latest_read_startTime = latest_read.startTime;
+	async function update_sensor(energy_data: EnergyEntry[]) {
+		const latest_entry = energy_data[0];
+		const start_of_day = moment(latest_entry.startTime).startOf("day");
+		const day_data = energy_data.filter((row: EnergyEntry) => {
+			return moment(row.startTime) > start_of_day;
+		});
+		const today_energy_use = day_data.reduce((agg, row) => {
+			return agg + row.energy;
+		}, 0);
 		axios.post(
 			"http://supervisor/core/api/states/sensor.coned_energy",
 			{
-				state: latest_read.value,
+				state: today_energy_use,
 				attributes: {
 					unit_of_measurement: "kWh",
 					friendly_name: "ConEd Energy Usage",
 					device_class: "energy",
-					//state_class: "measurement",
-					//last_reset: moment(latest_read.startTime).toISOString(),
+					state_class: "measurement",
+					last_reset: start_of_day.toISOString(),
 				},
 			},
 			{
 				headers: { Authorization: `Bearer ${process.env.SUPERVISOR_TOKEN}`, "Content-Type": "application/json" },
 			}
 		);
-		console.log(chalk.green(`Sent sensor update: ${latest_read.value} kWh @ ${moment(latest_read.startTime).format("LLL")}`));
+		console.log(chalk.green(`Sent sensor update: ${today_energy_use} kWh since ${start_of_day.format("LLL")}`));
 	}
 
 	async function db_store(raw_data: any) {
-		const filtered_data = raw_data.reads.filter((row: any) => {
-			return row.value !== null && row.value !== undefined;
-		});
-		const latest_read = filtered_data[0];
-		update_sensor(latest_read);
+		const filtered_data = raw_data.reads
+			.filter((row: any) => {
+				return row.value !== null && row.value !== undefined;
+			})
+			.map((row: any): EnergyEntry => {
+				return { startTime: new Date(row.startTime), endTime: new Date(row.endTime), energy: row.value };
+			}) as EnergyEntry[];
+		update_sensor(filtered_data);
 		for (const row of filtered_data) {
-			await energyModel.updateOrCreate({ startTime: new Date(row.startTime), endTime: new Date(row.endTime) }, { energy: row.value }).catch((e) => {
+			await energyModel.updateOrCreate({ startTime: row.startTime, endTime: row.endTime }, { energy: row.energy }).catch((e) => {
 				console.log(chalk.red(`Err: ${e}`));
 			});
 		}
