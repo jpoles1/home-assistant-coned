@@ -39,32 +39,34 @@ async function main() {
 	};
 	const energyModel = await db.model<EnergyEntry>("energy", energySchema);
 
-	async function update_sensor(energy_data: EnergyEntry[]) {
-		const latest_entry = energy_data[0];
-		const start_of_day = moment(latest_entry.startTime).startOf("day");
-		const day_data = energy_data.filter((row: EnergyEntry) => {
-			return moment(row.startTime) > start_of_day;
-		});
-		const today_energy_use = day_data.reduce((agg, row) => {
-			return agg + row.energy;
-		}, 0);
-		axios.post(
-			"http://supervisor/core/api/states/sensor.coned_energy",
-			{
-				state: today_energy_use,
-				attributes: {
-					unit_of_measurement: "kWh",
-					friendly_name: "ConEd Energy Usage",
-					device_class: "energy",
-					state_class: "measurement",
-					last_reset: start_of_day.toISOString(),
+	async function update_sensor(latest: EnergyEntry) {
+		// Find Date() for start of day of latest reading
+		const start_of_day = moment(latest.startTime).startOf("day");
+		// Get all data from current day (Date > start of day)
+		energyModel.find([["startTime", ">", start_of_day]]).then((day_data) => {
+			// Add up energy usage
+			const today_energy_use = day_data.reduce((agg, row) => {
+				return agg + row.energy;
+			}, 0);
+			// Send via home assistant core API
+			axios.post(
+				"http://supervisor/core/api/states/sensor.coned_energy",
+				{
+					state: today_energy_use,
+					attributes: {
+						unit_of_measurement: "kWh",
+						friendly_name: "ConEd Energy Usage",
+						device_class: "energy",
+						state_class: "measurement",
+						last_reset: start_of_day.toISOString(),
+					},
 				},
-			},
-			{
-				headers: { Authorization: `Bearer ${process.env.SUPERVISOR_TOKEN}`, "Content-Type": "application/json" },
-			}
-		);
-		console.log(chalk.green(`Sent sensor update: ${today_energy_use} kWh since ${start_of_day.format("LLL")}`));
+				{
+					headers: { Authorization: `Bearer ${process.env.SUPERVISOR_TOKEN}`, "Content-Type": "application/json" },
+				}
+			);
+			console.log(chalk.green(`Sent sensor update: ${today_energy_use} kWh since ${start_of_day.format("LLL")}`));
+		});
 	}
 
 	async function db_store(raw_data: any) {
@@ -75,7 +77,6 @@ async function main() {
 			.map((row: any): EnergyEntry => {
 				return { startTime: new Date(row.startTime), endTime: new Date(row.endTime), energy: row.value };
 			}) as EnergyEntry[];
-		update_sensor(filtered_data);
 		for (const row of filtered_data) {
 			await energyModel.updateOrCreate({ startTime: row.startTime, endTime: row.endTime }, { energy: row.energy }).catch((e) => {
 				console.log(chalk.red(`Err: ${e}`));
@@ -83,6 +84,8 @@ async function main() {
 		}
 		console.log(chalk.green("Database Updated!"));
 		console.log(chalk.green("Database Closed!"));
+		const latest = filtered_data[0];
+		update_sensor(latest);
 	}
 
 	const c = new ConEd({ db_store });

@@ -18,9 +18,6 @@ echo "MFA_SECRET =" $(sed 's/^........../**********/' <<<$MFA_SECRET)
 echo "ACCOUNT_UUID =" $ACCOUNT_UUID
 echo "METER_NUM =" $METER_NUM
 echo "SITE =" $SITE
-echo "MQTT_HOST =" $MQTT_HOST
-echo "MQTT_USER =" $MQTT_USER
-echo "MQTT_PASS =" $(sed 's/^........../**********/' <<<$MQTT_PASS)
 
 # Start the listener and enter an endless loop
 echo "Starting server!"
