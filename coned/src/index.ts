@@ -52,7 +52,7 @@ async function main() {
 					friendly_name: "ConEd Energy Usage",
 					device_class: "energy",
 					state_class: "measurement",
-					last_reset: latest_read.startTime.toISOString(),
+					last_reset: moment(latest_read.startTime).toISOString(),
 				},
 			},
 			{
