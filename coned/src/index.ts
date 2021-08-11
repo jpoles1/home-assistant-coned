@@ -51,8 +51,8 @@ async function main() {
 					unit_of_measurement: "kWh",
 					friendly_name: "ConEd Energy Usage",
 					device_class: "energy",
-					state_class: "measurement",
-					last_reset: moment(latest_read.startTime).toISOString(),
+					//state_class: "measurement",
+					//last_reset: moment(latest_read.startTime).toISOString(),
 				},
 			},
 			{
