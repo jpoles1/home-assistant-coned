@@ -32,7 +32,7 @@ export class ConEd {
 
 	async init(): Promise<void> {
 		this.browser = await pupeteer.launch({
-			defaultViewport: { width: 1920, height: 1080 },
+			headless: true,
 			args: ["--no-sandbox", "--disable-setuid-sandbox", "--single-process", "--no-zygote"],
 		});
 	}
@@ -46,14 +46,12 @@ export class ConEd {
 		await page.click(".submit-button");
 		// Wait for login to authenticate
 		await sleep(5000);
-		await page.screenshot({ path: "meter0.png" });
 		// Enter in 2 factor auth code (see README for details)
 		await page.type("#form-login-mfa-code", process.env.MFA_SECRET!);
 		await page.click(".js-login-new-device-form .button");
 		// Wait for authentication to complete
 		await page.waitForNavigation();
 		await sleep(5000);
-		await page.screenshot({ path: "meter1.png" });
 	}
 	async read_api(): Promise<any> {
 		return new Promise(async (resolve) => {
@@ -61,7 +59,6 @@ export class ConEd {
 			const api_page = await this.browser!.newPage();
 			const api_url = `https://cned.opower.com/ei/edge/apis/cws-real-time-ami-v1/cws/cned/accounts/${process.env.ACCOUNT_UUID}/meters/${process.env.METER_NUM}/usage`;
 			await api_page.goto(api_url);
-			await api_page.screenshot({ path: "meter2.png" });
 			const data_elem = await api_page.$("pre");
 			const text_data = await api_page.evaluate((el: HTMLElement) => el.textContent, data_elem);
 			const raw_data = JSON.parse(text_data!);
