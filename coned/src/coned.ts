@@ -33,7 +33,7 @@ export class ConEd {
 	async init(): Promise<void> {
 		this.browser = await pupeteer.launch({
 			defaultViewport: { width: 1920, height: 1080 },
-			args: ["--no-sandbox", "--disable-setuid-sandbox"],
+			args: ["--no-sandbox", "--disable-setuid-sandbox", "--single-process", "--no-zygote"],
 		});
 	}
 	async login(): Promise<void> {
@@ -88,13 +88,14 @@ export class ConEd {
 		}
 		await this.browser?.close();
 	}
-	monitor(interval_min = 15): void {
+	monitor(): void {
 		this.fetch_once().then(() => {
 			setInterval(() => {
 				this.fetch_once().catch((err) => {
 					console.log(chalk.red("Fetch failed:", err));
+					if (this.browser) this.browser?.close();
 				});
-			}, interval_min * 60 * 1000);
+			}, this.refresh_interval_min * 60 * 1000);
 		});
 	}
 }
