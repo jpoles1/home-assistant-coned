@@ -74,6 +74,7 @@ async function main() {
 			.filter((row: any) => {
 				return row.value !== null && row.value !== undefined;
 			})
+			.reverse()
 			.map((row: any): EnergyEntry => {
 				return { startTime: new Date(row.startTime), endTime: new Date(row.endTime), energy: row.value };
 			}) as EnergyEntry[];
