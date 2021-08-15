@@ -43,7 +43,7 @@ async function main() {
 		// Find Date() for start of day of latest reading
 		const start_of_day = moment(latest.startTime).startOf("day");
 		// Get all data from current day (Date > start of day)
-		energyModel.find([["startTime", ">", start_of_day]]).then((day_data) => {
+		energyModel.find([["startTime", ">", start_of_day.toDate()]]).then((day_data) => {
 			// Add up energy usage
 			const today_energy_use = day_data.reduce((agg, row) => {
 				return agg + row.energy;
@@ -65,7 +65,7 @@ async function main() {
 					headers: { Authorization: `Bearer ${process.env.SUPERVISOR_TOKEN}`, "Content-Type": "application/json" },
 				}
 			);
-			console.log(chalk.green(`Sent sensor update: ${today_energy_use} kWh since ${start_of_day.format("LLL")}`));
+			console.log(chalk.green(`Sent sensor update: ${today_energy_use} kWh since ${start_of_day.format("LLL")} @ ${moment(Date.now()).format("LLL")}`));
 		});
 	}
 
