@@ -1,5 +1,6 @@
 import chalk from "chalk";
 import pupeteer from "puppeteer";
+import shell from "shelljs";
 
 function sleep(ms: number) {
 	return new Promise((resolve) => {
@@ -33,7 +34,7 @@ export class ConEd {
 	async init(): Promise<void> {
 		this.browser = await pupeteer.launch({
 			headless: true,
-			args: ["--no-sandbox", "--disable-setuid-sandbox", "--single-process", "--no-zygote"],
+			args: ["--single-process", "--no-zygote", "--no-sandbox", "--disable-setuid-sandbox"],
 		});
 	}
 	async login(): Promise<void> {
@@ -66,14 +67,32 @@ export class ConEd {
 			resolve(raw_data);
 		});
 	}
-	async fetch_once(): Promise<void> {
+	async fetch_once(): Promise<any> {
+		console.log("Fetching data from API...");
 		await this.init();
 		await this.login();
-		let raw_data = await this.read_api();
+		const raw_data = await this.read_api();
+		if (!raw_data || "error" in raw_data) {
+			Promise.reject(raw_data["error"] ? raw_data["error"]["details"] : "Unknown Err");
+		}
+		await this.browser?.close().catch(() => {
+			console.log(chalk.red("FAILED TO CLOSE CHROMIUM!"));
+		});
+		return Promise.resolve(raw_data);
+	}
+	async fetch_til_success(attempt_limit = 5): Promise<void> {
 		let attempt = 1;
-		while ("error" in raw_data && attempt < 5) {
-			console.log(chalk.yellow("Failed to fetch data from API:", raw_data["error"]["details"]));
-			raw_data = await this.read_api();
+		let raw_data = undefined;
+		while (attempt < attempt_limit && !raw_data) {
+			raw_data = await this.fetch_once().then(
+				(raw_data) => {
+					return raw_data;
+				},
+				(err) => {
+					console.log(chalk.yellow(`Attempt #${attempt} - Failed to fetch data from API: ${err}`));
+					return undefined;
+				}
+			);
 			await sleep(15000);
 			attempt++;
 		}
@@ -81,17 +100,14 @@ export class ConEd {
 			console.log(chalk.green("Successfully retrieved API data!"));
 			this.db_store!(raw_data);
 		} else {
-			console.log(chalk.red("Failed to retrieve API data:", raw_data["error"]));
+			console.log(chalk.red(`Failed to retrieve API data after ${attempt_limit} attempts...`));
 		}
-		await this.browser?.close();
+		shell.exec("pkill chromium");
 	}
 	monitor(): void {
-		this.fetch_once().then(() => {
+		this.fetch_til_success().then(() => {
 			setInterval(() => {
-				this.fetch_once().catch((err) => {
-					console.log(chalk.red("Fetch failed:", err));
-					if (this.browser) this.browser?.close();
-				});
+				this.fetch_til_success();
 			}, this.refresh_interval_min * 60 * 1000);
 		});
 	}
