@@ -40,7 +40,10 @@ export class ConEd {
 	async login(): Promise<void> {
 		const page = await this.browser!.newPage();
 		// Login to ConEd website
-		await page.goto("https://www.coned.com/en/login");
+		await page.goto("https://www.coned.com/en/login").catch((e) => {
+			console.log(`Failed to load login page: ${e}`);
+			return Promise.reject(e);
+		});
 		await page.type("#form-login-email", process.env.EMAIL!);
 		await page.type("#form-login-password", process.env.PASSWORD!);
 		await page.click("#form-login-remember-me");
@@ -70,7 +73,10 @@ export class ConEd {
 	async fetch_once(): Promise<any> {
 		console.log("Fetching data from API...");
 		await this.init();
-		await this.login();
+		await this.login().catch((e) => {
+			console.log(`Login Failure: ${e}`);
+			return Promise.reject(e);
+		});
 		const raw_data = await this.read_api();
 		if (!raw_data || "error" in raw_data) {
 			Promise.reject(raw_data["error"] ? raw_data["error"]["details"] : "Unknown Err");
